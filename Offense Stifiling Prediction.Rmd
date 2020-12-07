@@ -1,0 +1,83 @@
+---
+title: "Stifling Offense"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+# Determining Offense from Continuation of Pitch Clustering
+
+```{r}
+library(dplyr)
+library(randomForest)
+```
+
+
+# Creating OPS
+
+# The statistic that is most correlated to offensive production from a hitter is OPS. This current data set does not include the attribute of OPS. Therefore in order to determine what pitch does best at containing offense
+
+```{r}
+Twins_train_set <- mutate(Twins_train_set, OPS = (((h1b + h2b + h3b + hr) / (InPlay + hbp)) + ((h1b + (h2b*2) + (h3b*3) + (hr*4)) / InPlay)))
+Twins_test_set <- mutate(Twins_test_set, OPS = (((h1b + h2b + h3b + hr) / (InPlay + hbp)) + ((h1b + (h2b*2) + (h3b*3) + (hr*4)) / InPlay)))
+Twins_train_set$OPS[Twins_train_set$OPS == "NaN"] = 0
+Twins_test_set$OPS[Twins_test_set$OPS == "NaN"] = 0
+```
+
+# Random Forest Model Creation
+
+```{r}
+pitch_offense_model <- randomForest(cluster ~ ExitSpeed + LaunchAngle, data = Twins_train_set, ntrees = 1000)
+```
+
+# Predicting the Offensive Output of Each Pitch Using the Random Forest Model Above
+
+```{r}
+Twins_predict_train <- predict(pitch_offense_model, Twins_train_set, type = "response")
+Twins_predict_test <- predict(pitch_offense_model, Twins_test_set, type = "response")
+```
+
+# Adding the Prediction Outcome to the Train Data Set
+
+```{r}
+Twins_train_set <- cbind(Twins_predict_train, Twins_train_set)
+Twins_test_set <- cbind(Twins_predict_test, Twins_test_set)
+```
+
+# Creating the Offense Data Frame
+
+```{r}
+Twins_offense_train <- select(Twins_train_set, c(ExitSpeed, LaunchAngle, Direction, PitchType, OPS, Twins_predict_train))
+Twins_offense_test <- select(Twins_test_set, c(ExitSpeed, LaunchAngle, Direction, PitchType, OPS, Twins_predict_test))
+```
+
+# Renaming the Prediction Attribute
+
+```{r}
+Twins_offense_train <- rename(Twins_offense_train, OffensePredict = Twins_predict_train)
+Twins_offense_test <- rename(Twins_offense_test, OffensePredict = Twins_predict_test)
+```
+
+# Bind Both Data Frames Together
+
+```{r}
+Twins_Offense_Predict <- rbind(Twins_offense_train, Twins_offense_test)
+```
+
+# Recreating the Cluster Attribute
+
+```{r}
+Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "FB"] <- 1
+Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "LH CV"] <- 2
+Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "RH CV"] <- 3
+Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "LH SL"] <- 4
+Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "RH SL"] <- 5
+
+```
+
+# Aggregating the Data Frame to Determine Best Pitch at Stifling Offense
+
+```{r}
+Twins_Offense_Predict_agg <- aggregate(cluster ~ ., data = Twins_Offense_Predict, FUN = sum)
+```
+
