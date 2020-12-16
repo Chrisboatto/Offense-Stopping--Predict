@@ -9,75 +9,97 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 
 ```{r}
 library(dplyr)
+library(ggplot2)
+library(caret)
 library(randomForest)
 ```
 
+# This assignemt is continuing from the "Pitch Clustering" assignment that I previously posted.
 
-# Creating OPS
-
-# The statistic that is most correlated to offensive production from a hitter is OPS. This current data set does not include the attribute of OPS. Therefore in order to determine what pitch does best at containing offense
+# Feature Selection
 
 ```{r}
-Twins_train_set <- mutate(Twins_train_set, OPS = (((h1b + h2b + h3b + hr) / (InPlay + hbp)) + ((h1b + (h2b*2) + (h3b*3) + (hr*4)) / InPlay)))
-Twins_test_set <- mutate(Twins_test_set, OPS = (((h1b + h2b + h3b + hr) / (InPlay + hbp)) + ((h1b + (h2b*2) + (h3b*3) + (hr*4)) / InPlay)))
-Twins_train_set$OPS[Twins_train_set$OPS == "NaN"] = 0
-Twins_test_set$OPS[Twins_test_set$OPS == "NaN"] = 0
+Pitch_mod_train <- select(Pitch_train_set, c(ExitSpeed, LaunchAngle, Direction, cluster))
+Pitch_mod_test <- select(Pitch_test_set, c(ExitSpeed, LaunchAngle, Direction, cluster))
+```
+
+
+```{r}
+Pitch_Train_Scaled <- scale(Pitch_mod_train)
+Pitch_Test_Scaled <- scale(Pitch_mod_test)
 ```
 
 # Random Forest Model Creation
 
 ```{r}
-pitch_offense_model <- randomForest(cluster ~ ExitSpeed + LaunchAngle, data = Twins_train_set, ntrees = 1000)
+Pitch_RF_model <- randomForest(cluster ~ ., data = Pitch_mod_train, importance = TRUE, ntrees = 10, nodesize = 1, maxnodes = 10)
+```
+
+# Neural Net Model Creation
+
+```{r}
+Pitch_NN_model <- neuralnet(cluster ~ ExitSpeed + LaunchAngle + Direction, data = Pitch_Train_Scaled, hidden = 2, act.fct = "logistic", linear.output = FALSE)
 ```
 
 # Predicting the Offensive Output of Each Pitch Using the Random Forest Model Above
 
 ```{r}
-Twins_predict_train <- predict(pitch_offense_model, Twins_train_set, type = "response")
-Twins_predict_test <- predict(pitch_offense_model, Twins_test_set, type = "response")
+Pitch_predict_train <- predict(Pitch_RF_model, Pitch_train_set)
+Pitch_predict_test <- predict(Pitch_RF_model, Pitch_test_set)
 ```
 
 # Adding the Prediction Outcome to the Train Data Set
 
 ```{r}
-Twins_train_set <- cbind(Twins_predict_train, Twins_train_set)
-Twins_test_set <- cbind(Twins_predict_test, Twins_test_set)
-```
-
-# Creating the Offense Data Frame
-
-```{r}
-Twins_offense_train <- select(Twins_train_set, c(ExitSpeed, LaunchAngle, Direction, PitchType, OPS, Twins_predict_train))
-Twins_offense_test <- select(Twins_test_set, c(ExitSpeed, LaunchAngle, Direction, PitchType, OPS, Twins_predict_test))
+Pitch_mod_train <- cbind(Pitch_predict_train, Pitch_mod_train)
+Pitch_mod_test <- cbind(Pitch_predict_test, Pitch_mod_test)
 ```
 
 # Renaming the Prediction Attribute
 
 ```{r}
-Twins_offense_train <- rename(Twins_offense_train, OffensePredict = Twins_predict_train)
-Twins_offense_test <- rename(Twins_offense_test, OffensePredict = Twins_predict_test)
+Pitch_mod_train <- rename(Pitch_mod_train, OffensePredict = Pitch_predict_train)
+Pitch_mod_test <- rename(Pitch_mod_test, OffensePredict = Pitch_predict_test)
 ```
+
+# Re Labeling the Pitches in Test and Train then reclassifying the cluster based off the pitch type. The idea is to reclassify the cluster based on the pitch type to match with each set. The clusters are tagged differently in each set but the type of pitch is similar in both sets. Therefore I created the PitchType attribute again in the 'Mod' data sets to set a visual to what each pitch is. I then matched the "cluster" values for both data sets. This does not change the type of pitch that each cluster is but rather how it is numbered. 
+
+```{r}
+Pitch_mod_test <- mutate(Pitch_mod_test, "PitchType" = case_when(Pitch_mod_test$cluster == 1 ~ "RH SL"))
+Pitch_mod_test$PitchType[Pitch_mod_test$cluster == 2] <- "LH CV"
+Pitch_mod_test$PitchType[Pitch_mod_test$cluster == 3] <- "FB"
+Pitch_mod_test$PitchType[Pitch_mod_test$cluster == 4] <- "RH CV"
+Pitch_mod_test$PitchType[Pitch_mod_test$cluster == 5] <- "LH SL"
+
+Pitch_mod_train <- mutate(Pitch_mod_train, "PitchType" = case_when(Pitch_mod_train$cluster == 1 ~ "FB"))
+Pitch_mod_train$PitchType[Pitch_mod_train$cluster == 2] <- "RH SL"
+Pitch_mod_train$PitchType[Pitch_mod_train$cluster == 3] <- "LH SL"
+Pitch_mod_train$PitchType[Pitch_mod_train$cluster == 4] <- "RH CV"
+Pitch_mod_train$PitchType[Pitch_mod_train$cluster == 5] <- "LH CV"
+
+Pitch_mod_test$cluster[Pitch_mod_test$PitchType == "FB"] <- 1
+Pitch_mod_test$cluster[Pitch_mod_test$PitchType == "RH SL"] <- 2
+Pitch_mod_test$cluster[Pitch_mod_test$PitchType == "LH SL"] <- 3
+Pitch_mod_test$cluster[Pitch_mod_test$PitchType == "RH CV"] <- 4
+Pitch_mod_test$cluster[Pitch_mod_test$PitchType == "LH CV"] <- 5
+```
+
 
 # Bind Both Data Frames Together
 
 ```{r}
-Twins_Offense_Predict <- rbind(Twins_offense_train, Twins_offense_test)
-```
-
-# Recreating the Cluster Attribute
-
-```{r}
-Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "FB"] <- 1
-Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "LH CV"] <- 2
-Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "RH CV"] <- 3
-Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "LH SL"] <- 4
-Twins_Offense_Predict$cluster[Twins_Offense_Predict$PitchType == "RH SL"] <- 5
-
+Pitch_Offense_Predict <- rbind(Pitch_mod_train, Pitch_mod_test)
 ```
 
 # Aggregating the Data Frame to Determine Best Pitch at Stifling Offense
 
 ```{r}
-Twins_Offense_Predict_agg <- aggregate(cluster ~ ., data = Twins_Offense_Predict, FUN = sum)
+Pitch_Offense_Predict_agg_avg <- aggregate(OffensePredict ~ PitchType, data = Pitch_Offense_Predict, FUN = mean)
+```
+
+# Plotting the Final Results
+
+```{r}
+ggplot(Pitch_Offense_Predict_agg_avg, aes(x = PitchType, y = OffensePredict, fill = PitchType)) + geom_bar(stat = "identity") + labs(title = "Predicting Offense Graph", x = "Type of Pitch", y = "Offensive Score") + scale_fill_manual(values = c("FB" = "blue", "LH CV" = "red", "LH SL" = "orange", "RH CV" = "black", "RH SL" = "green"))
 ```
 
