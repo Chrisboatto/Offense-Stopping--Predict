@@ -36,14 +36,14 @@ Pitch_predict_train <- predict(Pitch_RF_model, Pitch_train_set, type = "response
 Pitch_predict_test <- predict(Pitch_RF_model, Pitch_test_set, type = "response")
 ```
 
-# Adding the Prediction Outcome to the Train Data Set
+# Adding the Prediction Outcome to the Train Data Set To Create an Encompassing Data Set
 
 ```{r}
 Pitch_mod_train <- cbind(Pitch_predict_train, Pitch_mod_train)
 Pitch_mod_test <- cbind(Pitch_predict_test, Pitch_mod_test)
 ```
 
-# Renaming the Prediction Attribute
+# Renaming the Prediction Attribute For Simplicity
 
 ```{r}
 Pitch_mod_train <- rename(Pitch_mod_train, OffensePredict = Pitch_predict_train)
@@ -80,6 +80,8 @@ Pitch_Offense_Predict <- rbind(Pitch_mod_train, Pitch_mod_test)
 ```
 
 # Aggregating the Data Frame to Determine Best Pitch at Stifling Offense
+
+#   The function I chose to aggregate by was 'mean' or the average. It would have been unfair and statistically irresponsible to use anything else because fastballs are the pitch that is universally thrown the most across baseball thus it would cause a higher score of offensive predictablity. Using max or min would also cause it to be a one score metric which would not gain an entire understanding of the task at hand. Mean was the best way to determine how well each pitch did based on the amount of times each pitch was thrown.
 
 ```{r}
 Pitch_Offense_Predict_agg_avg <- aggregate(OffensePredict ~ PitchType, data = Pitch_Offense_Predict, FUN = mean)
