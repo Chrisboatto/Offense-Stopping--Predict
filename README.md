@@ -1,5 +1,3 @@
-# Offense-Stopping--Predict
-
 **Which Pitch Stops Offense Best?**
 
 Following my last project of clustering or grouping pitches, this project uses those groupings to determine which pitch is best at stifling offense. Within the data set, the attributes that determined the offensive output of the observation were; ExitSpeed, LaunchAngle, and Direction. 
@@ -21,6 +19,7 @@ The end result didn't a massive statistical difference between the pitch groupin
 
 
 **Lets take a look!!!!!!!!**
+
 
 
 ![Image of Predicting Offense](https://raw.githubusercontent.com/Chrisboatto/Offense-Stopping--Predict/main/Predicting Offense.png?token=AKUDE7FG6IHSY36UO6RKLQK73KVM6)
