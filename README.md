@@ -22,5 +22,5 @@ The end result didn't a massive statistical difference between the pitch groupin
 
 
 
-![Image of Predicting Offense](https://raw.githubusercontent.com/Chrisboatto/Offense-Stopping--Predict/main/Predicting Offense.png?token=AKUDE7FG6IHSY36UO6RKLQK73KVM6)
+![Image of Predicting Offense](https://raw.githubusercontent.com/Chrisboatto/Offense-Stopping--Predict/main/Predicting%20Offense.png?token=AKUDE7FG6IHSY36UO6RKLQK73KVM6)
 
