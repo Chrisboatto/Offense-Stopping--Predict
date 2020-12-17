@@ -23,29 +23,17 @@ Pitch_mod_train <- select(Pitch_train_set, c(ExitSpeed, LaunchAngle, Direction, 
 Pitch_mod_test <- select(Pitch_test_set, c(ExitSpeed, LaunchAngle, Direction, cluster))
 ```
 
-
-```{r}
-Pitch_Train_Scaled <- scale(Pitch_mod_train)
-Pitch_Test_Scaled <- scale(Pitch_mod_test)
-```
-
 # Random Forest Model Creation
 
 ```{r}
 Pitch_RF_model <- randomForest(cluster ~ ., data = Pitch_mod_train, importance = TRUE, ntrees = 10, nodesize = 1, maxnodes = 10)
 ```
 
-# Neural Net Model Creation
-
-```{r}
-Pitch_NN_model <- neuralnet(cluster ~ ExitSpeed + LaunchAngle + Direction, data = Pitch_Train_Scaled, hidden = 2, act.fct = "logistic", linear.output = FALSE)
-```
-
 # Predicting the Offensive Output of Each Pitch Using the Random Forest Model Above
 
 ```{r}
-Pitch_predict_train <- predict(Pitch_RF_model, Pitch_train_set)
-Pitch_predict_test <- predict(Pitch_RF_model, Pitch_test_set)
+Pitch_predict_train <- predict(Pitch_RF_model, Pitch_train_set, type = "response")
+Pitch_predict_test <- predict(Pitch_RF_model, Pitch_test_set, type = "response")
 ```
 
 # Adding the Prediction Outcome to the Train Data Set
